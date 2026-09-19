@@ -23,6 +23,23 @@ AI-facing product and documentation surfaces can change without an obvious annou
 
 `llms.txt` is an emerging convention for publishing AI-facing site guidance. Razoreye treats it as a useful monitoring surface, not as a proven ranking factor or evidence of causality in AI answer engines.
 
+## Product Screenshots
+
+### Competitive Monitoring Dashboard
+Monitor Razorpay alongside competitors such as Stripe and Cashfree and detect changes in their AI-facing content.
+
+![Razoreye Competitive AEO Dashboard](docs/images/dashboard.png)
+
+### AI-Powered Competitive Analysis
+Razoreye compares detected competitor changes against Razorpay's existing coverage and recommends **ACT, WATCH, or NO ACTION**.
+
+![Razoreye AI Analysis](docs/images/analysis.png)
+
+### Automated Slack Intelligence
+Actionable competitive signals and recommended next steps are automatically routed to the relevant owner through Slack.
+
+![Razoreye Slack Intelligence](docs/images/slack.png)
+
 ## Architecture
 
 ```text
