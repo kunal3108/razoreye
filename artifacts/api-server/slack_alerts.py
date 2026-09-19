@@ -20,19 +20,15 @@ SLACK_TIMEZONE = ZoneInfo("Asia/Kolkata")
 
 
 def _slack_request(method: str, payload: dict[str, Any]) -> dict[str, Any]:
-    hostname = os.environ.get("REPLIT_CONNECTORS_HOSTNAME")
-    identity = os.environ.get("REPL_IDENTITY")
-    renewal = os.environ.get("WEB_REPL_RENEWAL")
-    token = f"repl {identity}" if identity else f"depl {renewal}" if renewal else None
-    if not hostname or not token:
-        raise RuntimeError("Replit connector runtime is unavailable")
+    token = os.environ.get("SLACK_BOT_TOKEN")
+    if not token:
+        raise RuntimeError("SLACK_BOT_TOKEN is not configured")
 
     response = requests.post(
-        f"https://{hostname}/api/v2/proxy/{method}",
+        f"https://slack.com/api/{method}",
         headers={
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
-            "X-Replit-Token": token,
-            "Connector-Name": "slack",
         },
         json=payload,
         timeout=20,
