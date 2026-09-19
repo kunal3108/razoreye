@@ -18,7 +18,7 @@ run = "uv run gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 razoreye:app
 args = ["sh", "-c", "true"]
 
 [services.production.run]
-args = ["uv", "run", "gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "4", "razoreye:app"]
+args = ["uv", "run", "gunicorn", "--chdir", "artifacts/api-server", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "4", "razoreye:app"]
 
 [services.production.run.env]
 PORT = "8080"

@@ -15,13 +15,18 @@ localPort = 25499
 run = "uv run gunicorn --chdir ../api-server --bind 0.0.0.0:$PORT --workers 1 --threads 4 razoreye:app"
 
 [services.production]
-build = [ "sh", "-c", "true" ]
-serve = "static"
-publicDir = "artifacts/razoreye-dashboard/dist/public"
 
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+[services.production.build]
+args = ["sh", "-c", "true"]
+
+[services.production.run]
+args = ["uv", "run", "gunicorn", "--chdir", "artifacts/api-server", "--bind", "0.0.0.0:25499", "--workers", "1", "--threads", "4", "razoreye:app"]
+
+[services.production.run.env]
+PORT = "25499"
+
+[services.production.health.startup]
+path = "/healthz"
 
 [services.env]
 PORT = "25499"
