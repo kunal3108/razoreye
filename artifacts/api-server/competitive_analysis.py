@@ -11,6 +11,32 @@ from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
+CONTEXT_LINE_LIMIT = 16
+CONTEXT_WINDOW = 1
+STOP_WORDS = {
+    "about",
+    "added",
+    "after",
+    "also",
+    "and",
+    "api",
+    "apis",
+    "are",
+    "current",
+    "from",
+    "into",
+    "llms",
+    "new",
+    "not",
+    "our",
+    "server",
+    "the",
+    "their",
+    "this",
+    "txt",
+    "with",
+}
+
 
 class CompetitiveAnalysis(TypedDict):
     signal: str
@@ -65,6 +91,86 @@ def _find_coverage(content: str, patterns: tuple[str, ...]) -> str | None:
                 title_match = re.match(r"- \[([^\]]+)\]", cleaned)
                 return title_match.group(1) if title_match else cleaned[:110]
     return None
+
+
+def _search_terms(diff_text: str) -> set[str]:
+    changed_text = " ".join(
+        line[1:]
+        for line in diff_text.splitlines()
+        if line.startswith(("+", "-"))
+        and not line.startswith(("+++", "---"))
+    ).lower()
+    terms = {
+        token
+        for token in re.findall(r"[a-z0-9][a-z0-9-]+", changed_text)
+        if len(token) >= 4 and token not in STOP_WORDS
+    }
+    for _, (topic_terms, _) in TOPICS.items():
+        if any(term in changed_text for term in topic_terms):
+            terms.update(
+                token
+                for term in topic_terms
+                for token in re.findall(r"[a-z0-9][a-z0-9-]+", term)
+                if len(token) >= 4 and token not in STOP_WORDS
+            )
+    return terms
+
+
+def _relevant_context(
+    content: str,
+    terms: set[str],
+    label: str,
+    evidence_patterns: tuple[str, ...] = (),
+) -> str:
+    """Retrieve grounded lines from a complete llms.txt without sending the full file."""
+    lines = content.splitlines()
+    if not lines:
+        return f"[{label} is empty]"
+
+    scored: list[tuple[int, int]] = []
+    for index, line in enumerate(lines):
+        lowered = line.lower()
+        matches = {term for term in terms if term in lowered}
+        if matches:
+            score = len(matches) * 10 + sum(len(term) for term in matches)
+            scored.append((score, index))
+
+    selected: set[int] = set()
+    for pattern in evidence_patterns:
+        pattern_matches = 0
+        for index, line in enumerate(lines):
+            if not re.search(pattern, line, re.IGNORECASE):
+                continue
+            selected.update(
+                range(
+                    max(0, index - CONTEXT_WINDOW),
+                    min(len(lines), index + CONTEXT_WINDOW + 1),
+                )
+            )
+            pattern_matches += 1
+            if pattern_matches >= 2:
+                break
+    for _, index in sorted(scored, reverse=True)[:CONTEXT_LINE_LIMIT]:
+        selected.update(
+            range(
+                max(0, index - CONTEXT_WINDOW),
+                min(len(lines), index + CONTEXT_WINDOW + 1),
+            )
+        )
+        for heading_index in range(index, -1, -1):
+            if lines[heading_index].lstrip().startswith("#"):
+                selected.add(heading_index)
+                break
+
+    if not selected:
+        return (
+            f"[No lexical matches found after scanning the complete {label} "
+            "for terms from the detected diff.]"
+        )
+
+    return "\n".join(
+        f"L{index + 1}: {lines[index]}" for index in sorted(selected)
+    )
 
 
 def deterministic_analysis(
@@ -167,6 +273,23 @@ def analyze_competitive_impact(
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY is not configured")
 
+        terms = _search_terms(diff_text)
+        changed_text = _added_text(diff_text)
+        evidence_patterns = tuple(
+            pattern
+            for _, (topic_terms, coverage_patterns) in TOPICS.items()
+            if any(term in changed_text for term in topic_terms)
+            for pattern in coverage_patterns
+        )
+        competitor_context = _relevant_context(
+            competitor_content, terms, "competitor llms.txt"
+        )
+        razorpay_context = _relevant_context(
+            razorpay_content,
+            terms,
+            "stored Razorpay llms.txt",
+            evidence_patterns,
+        )
         client = OpenAI(api_key=api_key, timeout=60.0, max_retries=1)
         response = client.chat.completions.create(
             model=os.environ.get("OPENAI_MODEL", "gpt-5-mini"),
@@ -190,8 +313,10 @@ def analyze_competitive_impact(
                     "content": (
                         f"COMPETITOR NAME:\n{competitor_name}\n\n"
                         f"DETECTED LLMS.TXT DIFF:\n{diff_text}\n\n"
-                        f"COMPETITOR CURRENT LLMS.TXT:\n{competitor_content}\n\n"
-                        f"RAZORPAY CURRENTLY STORED LLMS.TXT:\n{razorpay_content}"
+                        "RELEVANT COMPETITOR CONTEXT RETRIEVED FROM THE COMPLETE "
+                        f"CURRENT LLMS.TXT:\n{competitor_context}\n\n"
+                        "RELEVANT RAZORPAY EVIDENCE RETRIEVED FROM THE COMPLETE "
+                        f"STORED LLMS.TXT:\n{razorpay_context}"
                     ),
                 },
             ],

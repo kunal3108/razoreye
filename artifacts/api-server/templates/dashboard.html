@@ -44,11 +44,11 @@
       </div>
       <div class="change-count"><strong>{{ competitor.change_count }}</strong><small>CHANGES</small></div>
       {% if competitor.url == "demo://demopay/llms.txt" %}
-        <form method="post" action="{{ url_for('simulate_demopay_change', competitor_id=competitor.id) }}">
+        <form method="post" action="{{ url_for('simulate_demopay_change', competitor_id=competitor.id) }}" data-analyzing-form>
           <button class="simulate-button">SIMULATE CHANGE</button>
         </form>
       {% else %}
-        <form method="post" action="{{ url_for('manual_check', competitor_id=competitor.id) }}">
+        <form method="post" action="{{ url_for('manual_check', competitor_id=competitor.id) }}" data-analyzing-form>
           <button class="icon-button" title="Check now">↻</button>
         </form>
       {% endif %}
