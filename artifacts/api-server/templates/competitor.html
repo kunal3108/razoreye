@@ -41,6 +41,18 @@
           <summary><span><b>{{ change.detected_at|short_time }}</b><small>CONTENT CHANGED</small></span><i>+</i></summary>
           <pre class="diff">{% for line in change.diff_text.splitlines() %}<span class="{{ 'added' if line.startswith('+') and not line.startswith('+++') else 'removed' if line.startswith('-') and not line.startswith('---') else '' }}">{{ line }}</span>
 {% endfor %}</pre>
+          {% if change.analysis %}
+          <section class="razoreye-analysis">
+            <div class="analysis-title"><span class="brand-mark"><span></span></span><strong>RAZOREYE ANALYSIS</strong></div>
+            <dl>
+              <div><dt>SIGNAL</dt><dd>{{ change.analysis.signal }}</dd></div>
+              <div><dt>IMPACT</dt><dd><b class="impact {{ change.analysis.impact|lower }}">{{ change.analysis.impact }}</b></dd></div>
+              <div><dt>YOUR COVERAGE</dt><dd>{{ change.analysis.coverage }}</dd></div>
+              <div><dt>RECOMMENDATION</dt><dd><b class="recommendation">{{ change.analysis.recommendation }}</b></dd></div>
+              <div><dt>NEXT STEP</dt><dd>{{ change.analysis.next_step }}</dd></div>
+            </dl>
+          </section>
+          {% endif %}
         </details>
       {% endfor %}
       </div>

@@ -85,6 +85,14 @@ input:focus,select:focus { box-shadow:3px 3px 0 var(--acid); }.full { width:100%
 .current-file > pre { background:var(--ink); color:#d9dacd; padding:28px; overflow:auto; min-height:460px; max-height:700px; white-space:pre-wrap; line-height:1.65; font:12px "DM Mono",monospace; }
 .timeline details { border-bottom:1px solid var(--line); }.timeline summary { padding:20px 0; cursor:pointer; display:flex; justify-content:space-between; list-style:none; }.timeline summary b,.timeline summary small { display:block; }.timeline summary small { color:var(--orange); font:9px "DM Mono",monospace; margin-top:6px; }.timeline summary i { font-style:normal; font-size:22px; }
 .diff { overflow:auto; background:#deddd3; padding:14px; font:10px/1.55 "DM Mono",monospace; }.diff span { display:block; }.diff .added { background:#cfe9b0; }.diff .removed { background:#efc0b5; }.danger-button { width:100%; margin-top:45px; color:#a32e18; background:transparent; border:1px solid #a32e18; }.error-banner { display:flex; gap:20px; padding:16px; background:#f5d3ca; color:#7c2212; margin-top:20px; font-size:13px; }
+.razoreye-analysis { margin: 0 0 22px; border: 1px solid var(--ink); background: #f7f6ed; }
+.analysis-title { display:flex; align-items:center; gap:10px; padding:12px 14px; color:var(--paper); background:var(--ink); font:500 10px "DM Mono",monospace; letter-spacing:.09em; }
+.analysis-title .brand-mark { width:22px; height:22px; }.analysis-title .brand-mark span { transform:scale(.72); }
+.razoreye-analysis dl { margin:0; }.razoreye-analysis dl > div { display:grid; grid-template-columns:112px 1fr; border-bottom:1px solid var(--line); }.razoreye-analysis dl > div:last-child { border-bottom:0; }
+.razoreye-analysis dt { padding:12px; color:var(--muted); font:500 9px "DM Mono",monospace; letter-spacing:.06em; }
+.razoreye-analysis dd { margin:0; padding:12px; border-left:1px solid var(--line); font-size:11px; line-height:1.55; }
+.impact, .recommendation { display:inline-block; padding:3px 6px; background:var(--acid); color:var(--ink); font:600 9px "DM Mono",monospace; letter-spacing:.05em; }
+.impact.high { background:var(--orange); color:white; }.impact.low { background:#d9e9c5; }
 .page-empty { border:0; min-height:70vh; display:grid; place-items:center; align-content:center; gap:25px; }.page-empty h1 { font-size:60px; } footer { height:90px; display:flex; justify-content:space-between; align-items:center; border-top:2px solid var(--ink); color:var(--muted); }
 @media (max-width: 850px) {
   .shell { width:min(100% - 24px, 1420px); }.topbar { height:70px; }.system-status { font-size:9px; }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import json
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -11,6 +12,7 @@ from urllib.parse import urlparse
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
+from competitive_analysis import analyze_competitive_impact
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -94,6 +96,11 @@ def init_db() -> None:
             ON changes(competitor_id, detected_at DESC);
             """
         )
+        columns = {
+            row["name"] for row in db.execute("PRAGMA table_info(changes)").fetchall()
+        }
+        if "analysis_json" not in columns:
+            db.execute("ALTER TABLE changes ADD COLUMN analysis_json TEXT")
 
 
 def normalize_url(value: str) -> str:
@@ -150,18 +157,28 @@ def check_competitor(competitor_id: int) -> tuple[bool, str]:
 
         with get_db() as db:
             if changed:
+                razorpay = db.execute(
+                    "SELECT current_content FROM competitors WHERE name = 'Razorpay' LIMIT 1"
+                ).fetchone()
+                diff_text = make_diff(competitor["current_content"] or "", content)
+                analysis = analyze_competitive_impact(
+                    competitor_name=competitor["name"],
+                    diff_text=diff_text,
+                    razorpay_content=(razorpay["current_content"] if razorpay else "") or "",
+                )
                 db.execute(
                     """
                     INSERT INTO changes
-                    (competitor_id, detected_at, old_content, new_content, diff_text)
-                    VALUES (?, ?, ?, ?, ?)
+                    (competitor_id, detected_at, old_content, new_content, diff_text, analysis_json)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
                         competitor_id,
                         checked_at,
                         competitor["current_content"] or "",
                         content,
-                        make_diff(competitor["current_content"] or "", content),
+                        diff_text,
+                        json.dumps(analysis),
                     ),
                 )
             db.execute(
@@ -318,15 +335,20 @@ def competitor_detail(competitor_id: int):
         competitor = db.execute(
             "SELECT * FROM competitors WHERE id = ?", (competitor_id,)
         ).fetchone()
-        changes = db.execute(
+        change_rows = db.execute(
             "SELECT * FROM changes WHERE competitor_id = ? ORDER BY detected_at DESC",
             (competitor_id,),
         ).fetchall()
     if not competitor:
         return render_template("404.html"), 404
-    return render_template(
-        "competitor.html", competitor=competitor, changes=changes
-    )
+    changes = []
+    for row in change_rows:
+        change = dict(row)
+        change["analysis"] = (
+            json.loads(change["analysis_json"]) if change["analysis_json"] else None
+        )
+        changes.append(change)
+    return render_template("competitor.html", competitor=competitor, changes=changes)
 
 
 @app.get("/demo/demopay/llms.txt")

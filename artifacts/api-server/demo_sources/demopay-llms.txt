@@ -3,8 +3,13 @@
 ## Products
 - Payment Gateway
 - Payment Links
+- International Payments
+- Subscriptions
 
 ## APIs
 - Payments API
 - Refund API
 - Webhooks
+- International Payments API
+- Subscription API
+- MCP Server
