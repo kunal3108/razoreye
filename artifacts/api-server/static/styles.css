@@ -42,7 +42,7 @@ h1 em { font-family: Georgia, serif; font-weight: 400; }
 .section-heading > div { display: flex; align-items: center; gap: 16px; }
 .section-heading h2 { font-size: 27px; margin: 0; letter-spacing: -.04em; }
 .section-index { font: 500 11px "DM Mono", monospace; color: var(--orange); }
-.monitor-row { display: grid; grid-template-columns: 1fr 190px 100px 42px 42px; gap: 22px; align-items: center; padding: 20px 4px; border-bottom: 1px solid var(--line); transition: padding .2s, background .2s; }
+.monitor-row { display: grid; grid-template-columns: 1fr 190px 100px 150px 42px; gap: 22px; align-items: center; padding: 20px 4px; border-bottom: 1px solid var(--line); transition: padding .2s, background .2s; }
 .monitor-row:hover { padding-left: 12px; background: rgba(215,255,66,.18); }
 .monitor-main { display: flex; gap: 16px; align-items: center; text-decoration: none; }
 .site-avatar { width: 48px; height: 48px; background: var(--ink); color: var(--acid); display: grid; place-items: center; font: 500 13px "DM Mono", monospace; }
@@ -57,6 +57,8 @@ h1 em { font-family: Georgia, serif; font-weight: 400; }
 .change-count small { color: var(--muted); font: 10px "DM Mono", monospace; }
 .icon-button, .close-button { border: 1px solid var(--line); background: transparent; width: 38px; height: 38px; font-size: 19px; }
 .icon-button:hover { border-color: var(--ink); }
+.simulate-button { width: 100%; padding: 11px 9px; border: 1px solid var(--ink); background: var(--acid); font: 600 9px "DM Mono", monospace; letter-spacing: .06em; white-space: nowrap; }
+.simulate-button:hover { background: var(--ink); color: var(--acid); }
 .arrow-link { font-size: 25px; text-decoration: none; }
 .empty-state { padding: 80px 20px; text-align: center; border-bottom: 1px solid var(--line); }
 .empty-state h3 { font-size: 24px; margin: 22px 0 8px; }

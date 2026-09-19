@@ -43,9 +43,15 @@
         <small>{{ competitor.last_checked_at|short_time }}</small>
       </div>
       <div class="change-count"><strong>{{ competitor.change_count }}</strong><small>CHANGES</small></div>
-      <form method="post" action="{{ url_for('manual_check', competitor_id=competitor.id) }}">
-        <button class="icon-button" title="Check now">↻</button>
-      </form>
+      {% if competitor.url == "demo://demopay/llms.txt" %}
+        <form method="post" action="{{ url_for('simulate_demopay_change', competitor_id=competitor.id) }}">
+          <button class="simulate-button">SIMULATE CHANGE</button>
+        </form>
+      {% else %}
+        <form method="post" action="{{ url_for('manual_check', competitor_id=competitor.id) }}">
+          <button class="icon-button" title="Check now">↻</button>
+        </form>
+      {% endif %}
       <a class="arrow-link" href="{{ url_for('competitor_detail', competitor_id=competitor.id) }}">→</a>
     </article>
     {% endfor %}

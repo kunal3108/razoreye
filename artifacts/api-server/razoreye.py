@@ -16,6 +16,35 @@ from flask import Flask, flash, jsonify, redirect, render_template, request, url
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE_PATH = Path(os.environ.get("RAZOREYE_DB", BASE_DIR / "razoreye.db"))
 USER_AGENT = "Razoreye/1.0 llms.txt monitor"
+DEMOPAY_URL = "demo://demopay/llms.txt"
+DEMOPAY_SOURCE = BASE_DIR / "demo_sources" / "demopay-llms.txt"
+DEMOPAY_VERSION_1 = """# DemoPay
+
+## Products
+- Payment Gateway
+- Payment Links
+
+## APIs
+- Payments API
+- Refund API
+- Webhooks
+"""
+DEMOPAY_VERSION_2 = """# DemoPay
+
+## Products
+- Payment Gateway
+- Payment Links
+- International Payments
+- Subscriptions
+
+## APIs
+- Payments API
+- Refund API
+- Webhooks
+- International Payments API
+- Subscription API
+- MCP Server
+"""
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "razoreye-development-key")
@@ -101,14 +130,19 @@ def check_competitor(competitor_id: int) -> tuple[bool, str]:
 
     checked_at = utc_now()
     try:
-        response = requests.get(
-            competitor["url"],
-            headers={"User-Agent": USER_AGENT, "Accept": "text/plain,*/*"},
-            timeout=15,
-            allow_redirects=True,
-        )
-        response.raise_for_status()
-        content = response.text
+        if competitor["url"] == DEMOPAY_URL:
+            content = DEMOPAY_SOURCE.read_text(encoding="utf-8")
+            status_code = 200
+        else:
+            response = requests.get(
+                competitor["url"],
+                headers={"User-Agent": USER_AGENT, "Accept": "text/plain,*/*"},
+                timeout=15,
+                allow_redirects=True,
+            )
+            response.raise_for_status()
+            content = response.text
+            status_code = response.status_code
         content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
         changed = bool(
             competitor["current_hash"] and competitor["current_hash"] != content_hash
@@ -141,7 +175,7 @@ def check_competitor(competitor_id: int) -> tuple[bool, str]:
                     checked_at,
                     int(changed),
                     checked_at,
-                    response.status_code,
+                    status_code,
                     content_hash,
                     content,
                     competitor_id,
@@ -159,6 +193,34 @@ def check_competitor(competitor_id: int) -> tuple[bool, str]:
                 (checked_at, str(exc)[:500], competitor_id),
             )
         return False, f"Check failed: {exc}"
+
+
+def ensure_demopay_monitor() -> None:
+    DEMOPAY_SOURCE.parent.mkdir(parents=True, exist_ok=True)
+    if not DEMOPAY_SOURCE.exists():
+        DEMOPAY_SOURCE.write_text(DEMOPAY_VERSION_1, encoding="utf-8")
+    with get_db() as db:
+        existing = db.execute(
+            "SELECT id FROM competitors WHERE url = ?", (DEMOPAY_URL,)
+        ).fetchone()
+        if not existing:
+            cursor = db.execute(
+                """
+                INSERT INTO competitors
+                (name, url, check_interval, active, created_at)
+                VALUES ('DemoPay', ?, 60, 1, ?)
+                """,
+                (DEMOPAY_URL, utc_now()),
+            )
+            competitor_id = cursor.lastrowid
+        else:
+            competitor_id = existing["id"]
+    with get_db() as db:
+        baseline_exists = db.execute(
+            "SELECT current_hash FROM competitors WHERE id = ?", (competitor_id,)
+        ).fetchone()["current_hash"]
+    if not baseline_exists:
+        check_competitor(competitor_id)
 
 
 def run_scheduled_checks() -> None:
@@ -267,6 +329,57 @@ def competitor_detail(competitor_id: int):
     )
 
 
+@app.get("/demo/demopay/llms.txt")
+def demopay_llms_txt():
+    return DEMOPAY_SOURCE.read_text(encoding="utf-8"), 200, {
+        "Content-Type": "text/plain; charset=utf-8"
+    }
+
+
+@app.post("/competitors/<int:competitor_id>/simulate")
+def simulate_demopay_change(competitor_id: int):
+    with get_db() as db:
+        competitor = db.execute(
+            "SELECT url FROM competitors WHERE id = ?", (competitor_id,)
+        ).fetchone()
+    if not competitor or competitor["url"] != DEMOPAY_URL:
+        return render_template("404.html"), 404
+    DEMOPAY_SOURCE.write_text(DEMOPAY_VERSION_2, encoding="utf-8")
+    changed, message = check_competitor(competitor_id)
+    flash(
+        "DemoPay Version 2 detected and saved."
+        if changed
+        else "DemoPay is already on Version 2.",
+        "change" if changed else "success",
+    )
+    return redirect(request.referrer or url_for("competitor_detail", competitor_id=competitor_id))
+
+
+@app.post("/competitors/<int:competitor_id>/reset-demo")
+def reset_demopay(competitor_id: int):
+    with get_db() as db:
+        competitor = db.execute(
+            "SELECT url FROM competitors WHERE id = ?", (competitor_id,)
+        ).fetchone()
+    if not competitor or competitor["url"] != DEMOPAY_URL:
+        return render_template("404.html"), 404
+    DEMOPAY_SOURCE.write_text(DEMOPAY_VERSION_1, encoding="utf-8")
+    baseline_hash = hashlib.sha256(DEMOPAY_VERSION_1.encode("utf-8")).hexdigest()
+    with get_db() as db:
+        db.execute("DELETE FROM changes WHERE competitor_id = ?", (competitor_id,))
+        db.execute(
+            """
+            UPDATE competitors
+            SET current_hash = ?, current_content = ?, last_status = 200,
+                last_error = NULL, last_checked_at = ?, last_changed_at = NULL
+            WHERE id = ?
+            """,
+            (baseline_hash, DEMOPAY_VERSION_1, utc_now(), competitor_id),
+        )
+    flash("DemoPay reset to the Version 1 baseline.", "success")
+    return redirect(request.referrer or url_for("competitor_detail", competitor_id=competitor_id))
+
+
 @app.post("/competitors/<int:competitor_id>/check")
 def manual_check(competitor_id: int):
     changed, message = check_competitor(competitor_id)
@@ -298,6 +411,7 @@ def health():
 
 
 init_db()
+ensure_demopay_monitor()
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.add_job(run_scheduled_checks, "interval", minutes=1, max_instances=1)
 if os.environ.get("WERKZEUG_RUN_MAIN") != "true":

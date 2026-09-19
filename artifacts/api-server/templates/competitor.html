@@ -10,6 +10,10 @@
     <a href="{{ competitor.url }}" target="_blank" rel="noopener">{{ competitor.url }}</a>
   </div>
   <div class="detail-actions">
+    {% if competitor.url == "demo://demopay/llms.txt" %}
+    <form method="post" action="{{ url_for('simulate_demopay_change', competitor_id=competitor.id) }}"><button class="primary-button">SIMULATE CHANGE</button></form>
+    <form method="post" action="{{ url_for('reset_demopay', competitor_id=competitor.id) }}"><button class="secondary-button">RESET TO VERSION 1</button></form>
+    {% endif %}
     <form method="post" action="{{ url_for('manual_check', competitor_id=competitor.id) }}"><button class="primary-button">↻ CHECK NOW</button></form>
     <form method="post" action="{{ url_for('toggle_competitor', competitor_id=competitor.id) }}"><button class="secondary-button">{{ "PAUSE" if competitor.active else "RESUME" }}</button></form>
   </div>
