@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ competitor.name }} — Razoreye{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('dashboard') }}">← ALL MONITORS</a>
+<section class="detail-hero">
+  <div class="site-avatar large">{{ competitor.name[:2]|upper }}</div>
+  <div>
+    <p class="eyebrow">MONITORED TARGET</p>
+    <h1>{{ competitor.name }}</h1>
+    <a href="{{ competitor.url }}" target="_blank" rel="noopener">{{ competitor.url }}</a>
+  </div>
+  <div class="detail-actions">
+    <form method="post" action="{{ url_for('manual_check', competitor_id=competitor.id) }}"><button class="primary-button">↻ CHECK NOW</button></form>
+    <form method="post" action="{{ url_for('toggle_competitor', competitor_id=competitor.id) }}"><button class="secondary-button">{{ "PAUSE" if competitor.active else "RESUME" }}</button></form>
+  </div>
+</section>
+
+{% if competitor.last_error %}
+<div class="error-banner"><strong>LAST CHECK FAILED</strong><span>{{ competitor.last_error }}</span></div>
+{% endif %}
+
+<section class="detail-grid">
+  <div class="current-file">
+    <div class="section-heading"><div><span class="section-index">01</span><h2>Current llms.txt</h2></div><span>{{ competitor.last_checked_at|short_time }}</span></div>
+    {% if competitor.current_content %}
+      <pre>{{ competitor.current_content }}</pre>
+    {% else %}
+      <div class="empty-state compact"><h3>No baseline captured</h3><p>Run a check to fetch the current file.</p></div>
+    {% endif %}
+  </div>
+  <aside>
+    <div class="section-heading"><div><span class="section-index">02</span><h2>Change log</h2></div><span>{{ changes|length }}</span></div>
+    {% if changes %}
+      <div class="timeline">
+      {% for change in changes %}
+        <details id="change-{{ change.id }}" {% if loop.first %}open{% endif %}>
+          <summary><span><b>{{ change.detected_at|short_time }}</b><small>CONTENT CHANGED</small></span><i>+</i></summary>
+          <pre class="diff">{% for line in change.diff_text.splitlines() %}<span class="{{ 'added' if line.startswith('+') and not line.startswith('+++') else 'removed' if line.startswith('-') and not line.startswith('---') else '' }}">{{ line }}</span>
+{% endfor %}</pre>
+        </details>
+      {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state compact"><h3>Baseline established</h3><p>Future changes will appear here as readable diffs.</p></div>
+    {% endif %}
+    <form method="post" action="{{ url_for('delete_competitor', competitor_id=competitor.id) }}" onsubmit="return confirm('Delete this monitor and all of its history?')">
+      <button class="danger-button">DELETE MONITOR</button>
+    </form>
+  </aside>
+</section>
+{% endblock %}

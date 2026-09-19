@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">COMPETITIVE SIGNAL / LIVE</p>
+    <h1>See what your competitors<br><em>tell the machines.</em></h1>
+    <p class="lede">Monitor every change to competitors’ llms.txt files. Catch positioning shifts, new products, and strategic signals before they become obvious.</p>
+  </div>
+  <button class="primary-button" data-open-modal><span>+</span> ADD MONITOR</button>
+</section>
+
+<section class="metrics">
+  <article><span class="metric-label">MONITORED</span><strong>{{ competitors|length }}</strong><small>competitors</small></article>
+  <article><span class="metric-label">HEALTHY</span><strong>{{ healthy }}</strong><small>responding now</small></article>
+  <article><span class="metric-label">CHANGES</span><strong>{{ total_changes }}</strong><small>signals captured</small></article>
+  <article><span class="metric-label">SYSTEM</span><strong class="word-metric">ONLINE</strong><small>checks every minute</small></article>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <div><span class="section-index">01</span><h2>Monitors</h2></div>
+    <span>{{ competitors|length }} TOTAL</span>
+  </div>
+  {% if competitors %}
+  <div class="monitor-list">
+    {% for competitor in competitors %}
+    <article class="monitor-row">
+      <a class="monitor-main" href="{{ url_for('competitor_detail', competitor_id=competitor.id) }}">
+        <span class="site-avatar">{{ competitor.name[:2]|upper }}</span>
+        <span>
+          <strong>{{ competitor.name }}</strong>
+          <small>{{ competitor.url|domain }}</small>
+        </span>
+      </a>
+      <div class="status-block">
+        {% if competitor.last_error %}
+          <span class="status error">CHECK FAILED</span>
+        {% elif competitor.last_status %}
+          <span class="status healthy">LIVE · {{ competitor.last_status }}</span>
+        {% else %}
+          <span class="status waiting">WAITING</span>
+        {% endif %}
+        <small>{{ competitor.last_checked_at|short_time }}</small>
+      </div>
+      <div class="change-count"><strong>{{ competitor.change_count }}</strong><small>CHANGES</small></div>
+      <form method="post" action="{{ url_for('manual_check', competitor_id=competitor.id) }}">
+        <button class="icon-button" title="Check now">↻</button>
+      </form>
+      <a class="arrow-link" href="{{ url_for('competitor_detail', competitor_id=competitor.id) }}">→</a>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="radar"><i></i></span>
+    <h3>No signals yet</h3>
+    <p>Add your first competitor and Razoreye will establish a baseline immediately.</p>
+    <button class="text-button" data-open-modal>ADD YOUR FIRST MONITOR →</button>
+  </div>
+  {% endif %}
+</section>
+
+{% if recent_changes %}
+<section class="section">
+  <div class="section-heading">
+    <div><span class="section-index">02</span><h2>Recent signals</h2></div>
+    <span>LATEST FIRST</span>
+  </div>
+  <div class="signal-grid">
+    {% for change in recent_changes %}
+    <a href="{{ url_for('competitor_detail', competitor_id=change.competitor_id) }}#change-{{ change.id }}" class="signal-card">
+      <span>CHANGE DETECTED</span>
+      <h3>{{ change.competitor_name }}</h3>
+      <p>{{ change.diff_text.splitlines()|length }} diff lines captured</p>
+      <small>{{ change.detected_at|short_time }}</small>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<dialog id="add-modal">
+  <form method="post" action="{{ url_for('add_competitor') }}">
+    <div class="modal-head">
+      <div><span class="eyebrow">NEW TARGET</span><h2>Add a monitor</h2></div>
+      <button type="button" class="close-button" data-close-modal>×</button>
+    </div>
+    <label>COMPETITOR NAME<input name="name" placeholder="e.g. Anthropic" required autofocus></label>
+    <label>WEBSITE OR LLMS.TXT URL<input name="url" placeholder="anthropic.com or https://anthropic.com/llms.txt" required></label>
+    <label>CHECK FREQUENCY
+      <select name="check_interval">
+        <option value="15">Every 15 minutes</option>
+        <option value="60" selected>Every hour</option>
+        <option value="360">Every 6 hours</option>
+        <option value="1440">Daily</option>
+      </select>
+    </label>
+    <button class="primary-button full" type="submit">START MONITORING →</button>
+  </form>
+</dialog>
+{% endblock %}
