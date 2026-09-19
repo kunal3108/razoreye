@@ -43,21 +43,32 @@ Actionable competitive signals and recommended next steps are automatically rout
 ## Architecture
 
 ```text
-Competitor AI-facing content
-        ↓
-      Monitor
-        ↓
-SHA-256 Change Detection
-        ↓
-   Version / Diff
-        ↓
-   LLM Analysis
-        ↓
-Brand Coverage Comparison
-        ↓
-ACT / WATCH / NO ACTION
-        ↓
-      Slack
+          RAZOREYE
+
+ Stripe / Cashfree / Competitors
+              │
+              ▼
+      👀 MONITOR CHANGES
+   What are competitors changing?
+              │
+              ▼
+       🔍 IDENTIFY SIGNAL
+ New product? API? Positioning?
+              │
+              ▼
+      ⚖️ COMPARE WITH US
+ Does Razorpay already cover this?
+              │
+              ▼
+       🧠 DECIDE IMPACT
+     Does this matter to us?
+              │
+              ▼
+    ACT  •  WATCH  •  NO ACTION
+              │
+              ▼
+        💬 ALERT IN SLACK
+   What happened + what to do next
 ```
 
 ## Current MVP
