@@ -13,6 +13,7 @@ import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 from competitive_analysis import analyze_competitive_impact
+from slack_alerts import send_daily_slack_alert
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -94,6 +95,14 @@ def init_db() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_changes_competitor
             ON changes(competitor_id, detected_at DESC);
+
+            CREATE TABLE IF NOT EXISTS slack_alert_runs (
+                report_date TEXT PRIMARY KEY,
+                sent_at TEXT NOT NULL,
+                status TEXT NOT NULL,
+                parent_ts TEXT,
+                error TEXT
+            );
             """
         )
         columns = {
@@ -437,6 +446,19 @@ init_db()
 ensure_demopay_monitor()
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.add_job(run_scheduled_checks, "interval", minutes=1, max_instances=1)
+scheduler.add_job(
+    send_daily_slack_alert,
+    "cron",
+    hour=9,
+    minute=0,
+    timezone="Asia/Kolkata",
+    args=[DATABASE_PATH],
+    id="daily_slack_alert",
+    replace_existing=True,
+    coalesce=True,
+    max_instances=1,
+    misfire_grace_time=3600,
+)
 if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
     scheduler.start()
 
