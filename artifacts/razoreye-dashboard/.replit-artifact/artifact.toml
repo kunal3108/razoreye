@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Razoreye"
+description = "The web preview entry point for the existing Razoreye Flask dashboard, which monitors changes to competitors' llms.txt files."
+version = "1.0.0"
+id = "artifacts/razoreye-dashboard"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25499
+
+[services.development]
+run = "uv run gunicorn --chdir ../api-server --bind 0.0.0.0:$PORT --workers 1 --threads 4 razoreye:app"
+
+[services.production]
+build = [ "sh", "-c", "true" ]
+serve = "static"
+publicDir = "artifacts/razoreye-dashboard/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25499"
+BASE_PATH = "/"

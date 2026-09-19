@@ -1,13 +1,13 @@
 kind = "api"
-previewPath = "/"
-title = "Razoreye"
+previewPath = "/api"
+title = "Razoreye API"
 version = "1.0.0"
 id = "3B4_FFSkEVBkAeYMFRJ2e"
 
 [[services]]
 localPort = 8080
 name = "Razoreye"
-paths = ["/"]
+paths = ["/api"]
 
 [services.development]
 run = "uv run gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 razoreye:app"
