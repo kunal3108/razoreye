@@ -164,6 +164,7 @@ def check_competitor(competitor_id: int) -> tuple[bool, str]:
                 analysis = analyze_competitive_impact(
                     competitor_name=competitor["name"],
                     diff_text=diff_text,
+                    competitor_content=content,
                     razorpay_content=(razorpay["current_content"] if razorpay else "") or "",
                 )
                 db.execute(
