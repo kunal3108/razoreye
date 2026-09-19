@@ -44,24 +44,115 @@ def _slack_request(method: str, payload: dict[str, Any]) -> dict[str, Any]:
     return body
 
 
-def _post_message(text: str, thread_ts: str | None = None) -> dict[str, Any]:
+def _post_message(
+    text: str,
+    thread_ts: str | None = None,
+    blocks: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     payload: dict[str, Any] = {"channel": SLACK_CHANNEL_ID, "text": text}
     if thread_ts:
         payload["thread_ts"] = thread_ts
+    if blocks:
+        payload["blocks"] = blocks
     return _slack_request("chat.postMessage", payload)
 
 
-def _analysis_reply(competitor_name: str, analysis: dict[str, Any]) -> str:
-    return "\n".join(
+def _status_marker(value: str) -> str:
+    markers = {
+        "HIGH": "🔴",
+        "MEDIUM": "🟠",
+        "LOW": "🟢",
+        "ACT": "🟡",
+        "WATCH": "🟠",
+        "NO ACTION": "🟢",
+    }
+    return f"{markers.get(value, '⚪')} *{value}*"
+
+
+def _analysis_reply(
+    competitor_name: str, analysis: dict[str, Any]
+) -> tuple[str, list[dict[str, Any]]]:
+    signal = str(analysis.get("signal", "Not available"))
+    impact = str(analysis.get("impact", "Not available"))
+    coverage = str(analysis.get("coverage", "Not available"))
+    recommendation = str(analysis.get("recommendation", "Not available"))
+    next_step = str(analysis.get("next_step", "Not available"))
+    fallback_text = "\n".join(
         (
             f"<@{SLACK_CONTACT_ID}> *RAZOREYE ANALYSIS — {competitor_name}*",
-            f"*Signal:* {analysis.get('signal', 'Not available')}",
-            f"*Impact:* {analysis.get('impact', 'Not available')}",
-            f"*Your coverage:* {analysis.get('coverage', 'Not available')}",
-            f"*Recommendation:* {analysis.get('recommendation', 'Not available')}",
-            f"*Next step:* {analysis.get('next_step', 'Not available')}",
+            f"*Signal:* {signal}",
+            f"*Impact:* {impact}",
+            f"*Your coverage:* {coverage}",
+            f"*Recommendation:* {recommendation}",
+            f"*Next step:* {next_step}",
         )
     )
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "◉  RAZOREYE ANALYSIS",
+                "emoji": True,
+            },
+        },
+        {
+            "type": "context",
+            "elements": [
+                {"type": "mrkdwn", "text": f"*COMPETITOR*  {competitor_name}"}
+            ],
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "fields": [
+                {"type": "mrkdwn", "text": "*SIGNAL*"},
+                {"type": "mrkdwn", "text": signal},
+            ],
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "fields": [
+                {"type": "mrkdwn", "text": "*IMPACT*"},
+                {"type": "mrkdwn", "text": _status_marker(impact)},
+            ],
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "fields": [
+                {"type": "mrkdwn", "text": "*YOUR COVERAGE*"},
+                {"type": "mrkdwn", "text": coverage},
+            ],
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "fields": [
+                {"type": "mrkdwn", "text": "*RECOMMENDATION*"},
+                {"type": "mrkdwn", "text": _status_marker(recommendation)},
+            ],
+        },
+        {"type": "divider"},
+        {
+            "type": "section",
+            "fields": [
+                {"type": "mrkdwn", "text": "*NEXT STEP*"},
+                {"type": "mrkdwn", "text": next_step},
+            ],
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"Point of contact: <@{SLACK_CONTACT_ID}>",
+                }
+            ],
+        },
+    ]
+    return fallback_text, blocks
 
 
 def send_daily_slack_alert(database_path: Path) -> bool:
@@ -110,9 +201,11 @@ def send_daily_slack_alert(database_path: Path) -> bool:
             analysis = (
                 json.loads(row["analysis_json"]) if row["analysis_json"] else {}
             )
+            text, blocks = _analysis_reply(row["competitor_name"], analysis)
             _post_message(
-                _analysis_reply(row["competitor_name"], analysis),
+                text,
                 thread_ts=parent_ts,
+                blocks=blocks,
             )
         with sqlite3.connect(database_path) as db:
             db.execute(
